@@ -144,7 +144,8 @@ by Nick Kasprak*/
     /*end utility functions*/
     
     /*chart constructor*/
-    CBPP.Charts.Chart = function(div_selector, data, dataOptions, userOptions, uAnnotations) {
+    CBPP.Charts.Chart = function(div_selector, data, dataOptions, globalOptions, uAnnotations) {
+        
         if (CBPP.Charts.ready === false) {
             console.error("CBPP_Chart not ready yet");
             return false;
@@ -155,10 +156,10 @@ by Nick Kasprak*/
             data = [[[0,0],[1,1]]];
         }
         if (typeof(dataOptions)==="undefined") {
-            dataOptions = {};
+            dataOptions = [];
         }
-        if (typeof(userOptions)==="undefined") {
-            userOptions = {};
+        if (typeof(globalOptions)==="undefined") {
+            globalOptions = {};
         }
         if (typeof(uAnnotations)==="undefined") {
             uAnnotations = [];
@@ -172,41 +173,60 @@ by Nick Kasprak*/
             if (typeof(d.yaxis)==="undefined") {
                 d.yaxis = {};
             }
-        })(userOptions);
-
-        if (typeof(data.wrapperType) !== "undefined") {
-            if (data.wrapperType === "categories") {
-                userOptions.xaxis.tickFormatter = data.tF(data.categories);
-                userOptions.xaxis.min = 0 - data.barWidth*0.6;
-                userOptions.xaxis.max = data.categories.length - 1 + data.barWidth*0.6;
-                $.extend(true, userOptions, {series:{bars:{show:true}},bars:{barWidth:data.barWidth}});
-                userOptions.cbpp_xaxis_labelTicks = 1;
-                data = data.data;
-            }
-        }
-
-        /*default data options*/
-        (function() {
-            var d = data;
-            var r = [];
-            for (var i = 0,ii=d.length;i<ii;i++) {
-                r[i] = {};
-                r[i].data = d[i];
-                r[i].shadowSize = 0;
-                if (typeof(userOptions.bars)!=="undefined") {
-                    if (userOptions.bars.show) {
-                        if (typeof(dataOptions[i].bars) === "undefined") {
-                            dataOptions[i].bars = {};
-                        }
-                        dataOptions[i].bars.fillColor = dataOptions[i].color;
-                        
-                        dataOptions[i].bars.fill = 1;
+        })(globalOptions);
+                    
+        /*reshuffles some elements of these things for defined wrappers*/
+        function organizeWrapper(data, dataOptions, globalOptions) {
+            if (typeof(data.wrapperType) !== "undefined") {
+                if (data.wrapperType === "categories") {
+                    if (typeof(globalOptions.xaxis)==="undefined") {
+                        globalOptions.xaxis = {};
                     }
+                    globalOptions.xaxis.tickFormatter = data.tF(data.categories);
+                    globalOptions.xaxis.min = 0 - data.barWidth*0.6;
+                    globalOptions.xaxis.max = data.categories.length - 1 + data.barWidth*0.6;
+                    $.extend(true, globalOptions, {series:{bars:{show:true}},bars:{barWidth:data.barWidth}});
+                    globalOptions.cbpp_xaxis_labelTicks = 1;
+                    if (typeof(globalOptions.cbpp_xaxis_majorOffset)==="undefined") {
+                        globalOptions.cbpp_xaxis_majorOffset = 0.5;
+                    }
+                    data = data.data;
                 }
-                $.extend(true, r[i], dataOptions[i]);
             }
-            data = r; 
-        })();
+            /*default data options*/
+            (function() {
+                var d = data;
+                var r = [];
+                for (var i = 0,ii=d.length;i<ii;i++) {
+                    r[i] = {};
+                    r[i].data = d[i];
+                    r[i].shadowSize = 0;
+                    if (typeof(globalOptions.bars)!=="undefined") {
+                        if (typeof(dataOptions[i])==="undefined") {
+                            dataOptions[i] = {};
+                        }
+                        if (typeof(dataOptions[i].bars) === "undefined") {
+                            if (typeof(globalOptions.bars.fill)!=="undefined") {
+                                dataOptions[i].bars = {fill:globalOptions.bars.fill};
+                            } else {
+                                dataOptions[i].bars = {fill:1};
+                            }
+                        }
+                    }
+                    $.extend(true, r[i], dataOptions[i]);
+                }
+                data = r; 
+            })();
+            return {
+                data: data,
+                dataOptions: dataOptions,
+                globalOptions: globalOptions
+            };
+        }
+        var reshuffled = organizeWrapper(data, dataOptions, globalOptions);
+        data = reshuffled.data;
+        dataOptions = reshuffled.dataOptions;
+        globalOptions = reshuffled.globalOptions;
         var c = {}, draw, annotations = [];
         
         if (typeof(uAnnotations) !== "undefined") {
@@ -232,7 +252,135 @@ by Nick Kasprak*/
                 }
             }
         }
-        
+
+        function hexToRGB (hexString) {
+            if (typeof(hexString)==="undefined") {
+                return [255,255,255];
+            }
+            function fix(h) {
+                var r = "#";
+                for (var i = 1; i<=3; i++) {
+                    r += h.charAt(i) + h.charAt(i);
+                }
+                return r;
+            }
+            if (hexString.length === 4) {
+                hexString = fix(hexString);
+            }
+            var r = parseInt(hexString.substr(1, 2), 16),
+                g = parseInt(hexString.substr(3, 2), 16),
+                b = parseInt(hexString.substr(5, 2), 16);
+            return [r, g, b];
+        }
+
+        //And back the other way
+        function RGBToHex (rgbArray) {
+            function pad(num, size) {
+                var s = "0" + num;
+                return s.substr(s.length - size);
+            }
+            return "#" + pad(rgbArray[0].toString(16), 2) + pad(rgbArray[1].toString(16), 2) + pad(rgbArray[2].toString(16), 2);
+        }
+
+        function isColor(str) {
+            var len = str.length;
+            if (typeof(str) !== "string") {
+                return false;
+            }
+            if (len !== 4 && len !== 7) {
+                return false;
+            }
+            if (str.charAt(0) !== "#") {
+                return false;
+            }
+            for (var i = 1; i<len; i++) {
+                if ("abcdef".indexOf(str[i]) === -1 && isNaN(str[i]*1)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        function interpColor(p, c1, c2) {
+            var c1Arr = hexToRGB(c1);
+            var c2Arr = hexToRGB(c2);
+            var c3Arr = [];
+            for (var i = 0;i<3;i++) {
+                c3Arr[i] = Math.round((1-p)*c1Arr[i] + p*c2Arr[i]);
+            }
+            return RGBToHex(c3Arr);
+        }
+        function animateTo(duration, newData, newDataOptions, newGlobalOptions) {
+            if (typeof(newData)==="undefined" || newData === null) {newData = [];}
+            if (typeof(newDataOptions)==="undefined" || newDataOptions === null) {newDataOptions = [];}
+            if (typeof(newGlobalOptions)==="undefined" || newGlobalOptions === null) {newGlobalOptions = {};}
+            function interpolate(p, obj1, obj2) {
+                var i, ii, r;
+                if (Object.prototype.toString.call(obj1) === "[object Array]" && Object.prototype.toString.call(obj2) === "[object Array]") {
+                    //array loop
+                    r = [];
+                    for (i = 0,ii=obj1.length;i<ii;i++) {
+                        r[i] = interpolate(p, obj1[i], obj2[i]);
+                    }
+                    return r;
+                }
+                if (typeof obj1 === "object" && typeof obj2 === "object" && obj1 !== null && obj2 !== null) {
+                    //object loop
+                    r = {};
+                    for (i in obj1) {
+                        if (obj1.hasOwnProperty(i)) {
+                            if (obj2.hasOwnProperty(i)) {
+                                r[i] = interpolate(p, obj1[i], obj2[i]);
+                            } else {
+                                r[i] = obj1[i];
+                            }
+                        }
+                    }
+                    return r;
+                }
+                if (isColor(obj1) && isColor(obj2)) {
+                    return interpColor(p, obj1, obj2);  
+                }
+                if (isNaN(obj1*1) || isNaN(obj2*1)) {
+                    return obj1; /*non numeric item*/
+                } else {
+                    return (1-p)*obj1 + p*obj2;
+                }
+            }
+
+            var FRAME_DURATION = 20;
+            var numFrames = Math.ceil(duration/FRAME_DURATION);
+            var progress = 0;
+            var startData = [];
+            var startDataOptions = [];
+            var startGlobalOptions = {};
+            var reshuffled = organizeWrapper(newData, newDataOptions, newGlobalOptions);
+            newData = reshuffled.data;
+            newDataOptions = reshuffled.newDataOptions;
+            newGlobalOptions = reshuffled.globalOptions;
+            $.extend(true, startData, data);
+            $.extend(true, startDataOptions, dataOptions);
+            $.extend(true, startGlobalOptions, globalOptions);
+            
+            var a = setInterval(function() {
+                progress += 1;
+                if (progress >= numFrames) {
+                    progress = numFrames;
+                    /*change non-numeric values*/
+                    $.extend(true, data, newData);
+                    $.extend(true, dataOptions, newDataOptions);
+                    $.extend(true, globalOptions, newGlobalOptions);
+                    clearInterval(a);
+                } else {
+                    data = interpolate(progress/numFrames, startData, newData);
+                    dataOptions = interpolate(progress/numFrames, startDataOptions, newDataOptions);
+                    globalOptions = interpolate(progress/numFrames, startGlobalOptions, newGlobalOptions);
+                }
+                makeChart();
+                draw();
+            }, FRAME_DURATION);
+            return a;
+        }
+
         function makeChart() {
             function addAnnotations() {
                 var offset, /*point offset*/ 
@@ -302,7 +450,7 @@ by Nick Kasprak*/
                     ul = $("<ul>"),
                     li,
                     itemClass = "legendLine";
-                if (userOptions.cbpp_legend.type === "box") {
+                if (globalOptions.cbpp_legend.type === "box") {
                     itemClass = "legendBox";
                 }
                 for (var i = 0, ii = data.length; i<ii; i++) {
@@ -312,8 +460,8 @@ by Nick Kasprak*/
                     ul.append(li);
                 }
                 legend.append(ul);
-                legend.css("top",userOptions.cbpp_legend.top + "%");
-                legend.css("left", userOptions.cbpp_legend.left + "%");
+                legend.css("top",globalOptions.cbpp_legend.top + "%");
+                legend.css("left", globalOptions.cbpp_legend.left + "%");
                 c.placeholder.append(legend);
             }
             function add0Axis(y) {
@@ -331,14 +479,14 @@ by Nick Kasprak*/
         
             }
             function addLabels() {
-                if (typeof(userOptions.bars) !== "undefined") {
-                    if (typeof(userOptions.bars.labels) !== "undefined") {
-                        if (userOptions.bars.labels.show === true) {
+                if (typeof(globalOptions.bars) !== "undefined") {
+                    if (typeof(globalOptions.bars.labels) !== "undefined") {
+                        if (globalOptions.bars.labels.show === true) {
                             var data = c.plot.getData()[0].data, o, label, wrapper;
                             for (var i = 0, ii = data.length; i<ii; i++) {
-                                o = c.plot.pointOffset({x:data[i][0] + userOptions.bars.barWidth/2, y:data[i][1]});
+                                o = c.plot.pointOffset({x:data[i][0] + globalOptions.bars.barWidth/2, y:data[i][1]});
                                 wrapper = $("<div class='labelWrapper' style='left:" + o.left + "px;top:" + o.top + "px'></div>");
-                                label = $("<div class='label'>" + userOptions.bars.labels.formatter(data[i]) + "</div>");
+                                label = $("<div class='label'>" + globalOptions.bars.labels.formatter(data[i]) + "</div>");
                                 wrapper.append(label);
                                 c.placeholder.append(wrapper);
                             } 
@@ -367,11 +515,15 @@ by Nick Kasprak*/
                     if (options.cbpp_legend.show !== false) {
                         addLegend();
                     }
-                } 
-                add0Axis(0);
+                }
+
+                
                 addLabels();
-                var chartYMin = c.plot.getYAxes()[0].min;
-                if (chartYMin < 0) {
+                var yaxis = c.plot.getYAxes()[0],
+                    chartYMin = yaxis.min,
+                    chartYMax = yaxis.max;
+                if (chartYMin <= 0 && chartYMax > 0) {add0Axis(0);}
+                if (chartYMin !== 0) {
                     add0Axis(chartYMin);
                 }
             };
@@ -431,20 +583,25 @@ by Nick Kasprak*/
                     };
                 }
                 var majorOffset = 0;
-                if (typeof(userOptions.cbpp_xaxis_majorOffset)!=="undefined") {
-                    majorOffset = userOptions.cbpp_xaxis_majorOffset;
+                if (typeof(globalOptions.cbpp_xaxis_majorOffset)!=="undefined") {
+                    majorOffset = globalOptions.cbpp_xaxis_majorOffset;
                 }
                 var rounding = 1;
-                if (typeof(userOptions.cbpp_xaxis_majorTicks)==="number") {
-                    rounding = userOptions.cbpp_xaxis_majorTicks;
+                if (typeof(globalOptions.cbpp_xaxis_majorTicks)==="number") {
+                    rounding = globalOptions.cbpp_xaxis_majorTicks;
                 }
                 var xMin = Math.round(c.bounds.x.min/rounding)*rounding;
                 var xMax = Math.round(c.bounds.x.max/rounding)*rounding;
-                for (var x = xMin + majorOffset; x<=xMax;x+=userOptions.cbpp_xaxis_majorTicks) {
-                    c.markingsStorage.push(makeMarking(x,0.04));
+                var x;
+                if (typeof(globalOptions.cbpp_xaxis_majorTicks)!=="undefined") {
+                    for (x = xMin + majorOffset; x<=xMax;x+=globalOptions.cbpp_xaxis_majorTicks) {
+                        c.markingsStorage.push(makeMarking(x,0.04));
+                    }
                 }
-                for (x = xMin; x<=xMax;x+=userOptions.cbpp_xaxis_minorTicks) {
-                    c.markingsStorage.push(makeMarking(x,0.02));
+                if (typeof(globalOptions.cbpp_xaxis_minorTicks)!=="undefined") {
+                    for (x = xMin; x<=xMax;x+=globalOptions.cbpp_xaxis_minorTicks) {
+                        c.markingsStorage.push(makeMarking(x,0.02));
+                    }
                 }
             }
             /*needed for special ticks*/
@@ -453,23 +610,23 @@ by Nick Kasprak*/
                 var findRange = function() {
                     var i, ii, j, jj, xmin, xmax, ymin, ymax;
                     for (i = 0, ii = data.length; i<ii; i++) {
-                        for (j = 0, jj = data[i].length; j<jj; j++) {
+                        for (j = 0, jj = data[i].data.length; j<jj; j++) {
                             if (typeof(xmin)==="undefined") {
-                                xmin = data[i][j][0];
+                                xmin = data[i].data[j][0];
                             }
                             if (typeof(xmax)==="undefined") {
-                                xmax = data[i][j][0];
+                                xmax = data[i].data[j][0];
                             }
                             if (typeof(ymin)==="undefined") {
-                                ymin = data[i][j][0];
+                                ymin = data[i].data[j][1];
                             }
                             if (typeof(ymax)==="undefined") {
-                                ymax = data[i][j][0];
+                                ymax = data[i].data[j][1];
                             }
-                            xmin = Math.min(xmin, data[i][j][0]);
-                            xmax = Math.max(xmax, data[i][j][0]);
-                            ymin = Math.min(ymin, data[i][j][1]);
-                            ymax = Math.max(ymax, data[i][j][1]);
+                            xmin = Math.min(xmin, data[i].data[j][0]);
+                            xmax = Math.max(xmax, data[i].data[j][0]);
+                            ymin = Math.min(ymin, data[i].data[j][1]);
+                            ymax = Math.max(ymax, data[i].data[j][1]);
                         }
                     }
                     return {
@@ -506,26 +663,25 @@ by Nick Kasprak*/
                     return ranges.y.max;
                 };
             }, ranges = new RangeFinder();
-            if (typeof(userOptions.xaxis.min) === "undefined") {
-                userOptions.xaxis.min = ranges.getXMin();
+            if (typeof(globalOptions.xaxis.min) === "undefined") {
+                globalOptions.xaxis.min = ranges.getXMin();
             }
-            if (typeof(userOptions.xaxis.max) === "undefined") {
-                userOptions.xaxis.max = ranges.getXMax();
+            if (typeof(globalOptions.xaxis.max) === "undefined") {
+                globalOptions.xaxis.max = ranges.getXMax();
             }
-            if (typeof(userOptions.yaxis.min) === "undefined") {
-                userOptions.yaxis.min = ranges.getYMin();
+            if (typeof(globalOptions.yaxis.min) === "undefined") {
+                globalOptions.yaxis.min = ranges.getYMin();
             }
-            if (typeof(userOptions.yaxis.max) === "undefined") {
-                userOptions.yaxis.max = ranges.getYMax();
+            if (typeof(globalOptions.yaxis.max) === "undefined") {
+                globalOptions.yaxis.max = ranges.getYMax();
             }
             
             
             c.bounds = {x:{},y:{}};
-            c.bounds.y.max = userOptions.yaxis.max;
-            c.bounds.y.min = userOptions.yaxis.min;
-            c.bounds.x.max = userOptions.xaxis.max;
-            c.bounds.x.min = userOptions.xaxis.min;
-            
+            c.bounds.y.max = globalOptions.yaxis.max;
+            c.bounds.y.min = globalOptions.yaxis.min;
+            c.bounds.x.max = globalOptions.xaxis.max;
+            c.bounds.x.min = globalOptions.xaxis.min;
             setupGridMarkings();
             
             if (c.bounds.y.min !== 0) {
@@ -559,12 +715,12 @@ by Nick Kasprak*/
                 }
             };
             
-            if (typeof(userOptions.cbpp_xaxis_labelTicks) !== "undefined") {
-                options.xaxis.tickSize = userOptions.cbpp_xaxis_labelTicks;
-            } else if (typeof(userOptions.cbpp_xaxis_majorTicks) !== "undefined") {
-                options.xaxis.tickSize = userOptions.cbpp_xaxis_majorTicks;
+            if (typeof(globalOptions.cbpp_xaxis_labelTicks) !== "undefined") {
+                options.xaxis.tickSize = globalOptions.cbpp_xaxis_labelTicks;
+            } else if (typeof(globalOptions.cbpp_xaxis_majorTicks) !== "undefined") {
+                options.xaxis.tickSize = globalOptions.cbpp_xaxis_majorTicks;
             }
-            $.extend(true, options, userOptions);
+            $.extend(true, options, globalOptions);
             
             
         }
@@ -607,19 +763,22 @@ by Nick Kasprak*/
         this.setDataOptions = function(newDataOptions) {
             $.extend(true, dataOptions, newDataOptions);
         };
-        this.getUserOptions=  function() {
+        this.getGlobalOptions=  function() {
             var o = {};
-            $.extend(true,o, userOptions);
+            $.extend(true,o, globalOptions);
             return o;
         };
-        this.clearUserOptions= function() {
-            userOptions = {};
+        this.clearGlobalOptions= function() {
+            globalOptions = {};
         };
-        this.setUserOptions= function(newOptions) {
-            $.extend(true, userOptions, newOptions);
+        this.setGlobalOptions= function(newOptions) {
+            $.extend(true, globalOptions, newOptions);
         };
         this.getPlot= function() {
             return c.plot;
+        };
+        this.animateTo = function(duration, data, dataOptions, globalOptions) {
+            animateTo(duration, data, dataOptions, globalOptions);
         };
     };
     /*end chart constructor*/
