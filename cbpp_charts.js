@@ -15,7 +15,7 @@ by Nick Kasprak*/
     
     /*load dependencies*/
     CBPP.Charts.load = function(callback, options) {
-        CBPP.Charts.urlBase = CBPP.urlBase + "CBPP_Charts/v" + CBPP.Charts.version + "/";
+        var CBPP_URL_ROOT = CBPP.Charts.urlBase = CBPP.urlBase + "CBPP_Charts/v" + CBPP.Charts.version + "/";
         var thisChartLoaded = false;
         var urlBase = CBPP.Charts.urlBase;
         var flotLoaded = false, cssLoaded = false, excanvasloaded;
@@ -32,48 +32,32 @@ by Nick Kasprak*/
         } else {
             excanvasloaded = true;
         }
-        $.getScript(urlBase + "flot/jquery.flot.min.js", function() {
+        var flotOnLoad = function() {
             flotLoaded = true;
             if (typeof(options)==="undefined") {
-                options = {
-                    extraFlotPlugins: []
-                };
+                options = {};
             }
             
-            var pluginsRequested = 0,
+            /*var pluginsRequested = 0,
                 pluginCallback = function() {
                 pluginsRequested--;
                 tryReady();
-            };
-            if (options.extraFlotPlugins.length > 0) {
+            };*/
+            /*if (options.extraFlotPlugins.length > 0) {
                 for (var i = 0, ii = options.extraFlotPlugins.length; i<ii; i++) {
                     pluginsRequested++;
                     $.getScript(urlBase + "flot/jquery.flot." + options.extraFlotPlugins[i] + ".js", pluginCallback);
                 }
-            }
-            function tryReady() {
-                if (pluginsRequested === 0) {
-                    ready();
-                }
-            }
-            tryReady();
-        });
-        var l = document.createElement("link");
-        l.type="text/css";
-        l.rel="stylesheet";
-        l.href =  urlBase + 'cbpp_charts.css';
+            }*/
+            ready();
+        };
+        CBPP.JS(CBPP_URL_ROOT + "flot/jquery.flot.min.js", flotOnLoad);
         function loadCSS() {
             cssLoaded = true;
             ready();
         }
-        function cssLoadedCorrectly() {
-            /*console.log("cssLoadedCorrectly");*/
-            loadCSS();
-        }
-        l.onload = cssLoadedCorrectly;
-        l.load = cssLoadedCorrectly;
+        CBPP.CSS(CBPP_URL_ROOT + "cbpp_charts.css", loadCSS);
         
-        document.getElementsByTagName('head')[0].appendChild(l);
         function ready() {
             if (flotLoaded && cssLoaded && excanvasloaded && !thisChartLoaded) {
                 CBPP.Charts.ready = true;
@@ -525,6 +509,7 @@ by Nick Kasprak*/
         
             }
             function addLabels() {
+                var x, y;
                 if (typeof(globalOptions.bars) !== "undefined") {
                     if (typeof(globalOptions.bars.barWidth)==="undefined") {
                         globalOptions.bars.barWidth = 1;
@@ -535,7 +520,14 @@ by Nick Kasprak*/
                             for (var j = 0, jj = _data.length; j<jj; j++) {
                                 data = _data[j].data;
                                 for (var i = 0, ii = data.length; i<ii; i++) {
-                                    o = c.plot.pointOffset({x:data[i][0] + globalOptions.bars.barWidth/2, y:data[i][1]});
+                                    x = data[i][0];
+                                    y = data[i][1];
+                                    if (typeof(globalOptions.bars.labels.customXY)==="function") {
+                                        var xy = globalOptions.bars.labels.customXY(i);
+                                        x = xy.x;
+                                        y = xy.y;
+                                    }
+                                    o = c.plot.pointOffset({x:x + globalOptions.bars.barWidth/2, y:y});
                                     wrapper = $("<div class='labelWrapper' style='left:" + o.left + "px;top:" + o.top + "px'></div>");
                                     label = $("<div class='label'>" + globalOptions.bars.labels.formatter(data[i],j) + "</div>");
                                     wrapper.append(label);
