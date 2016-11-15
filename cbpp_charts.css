@@ -1,0 +1,131 @@
+div.cbppInteractiveChart {
+    font-size:16pt;
+}
+
+div.cbppInteractiveChart  .tooltip .anchor {
+    position:absolute;
+    font-size:16pt;
+    background-color:#000;
+    color:#fff;
+    padding:5px;
+    white-space: nowrap;
+}
+
+div.cbppInteractiveChart  .tooltip.north .anchor {
+    top:0px;
+}
+div.cbppInteractiveChart  .tooltip.south .anchor {
+    bottom:0px;
+}
+div.cbppInteractiveChart  .tooltip.east .anchor {
+    right:0px;
+}
+div.cbppInteractiveChart  .tooltip.west .anchor {
+    left:0px;
+}
+
+div.cbppInteractiveChart div.labelWrapper {
+    overflow:visible;
+    position:absolute;
+}
+
+div.cbppInteractiveChart div.labelWrapper .label {
+    position:relative;
+    left:-50%;
+    top:-1.2em;
+}
+
+div.cbppInteractiveChart  .tooltip {
+    position:absolute;
+    height:0px;
+    width:0px;
+    overflow:visible;
+    z-index:110;
+}
+
+div.cbppInteractiveChart div.aWrap div.vLine {
+    width:2px !important;
+    background-color:#000;
+    height:35px;
+    position:absolute;
+    bottom:0px;
+    left:0px;
+}
+
+div.cbppInteractiveChart div.aWrap div.circle {
+    width:12px !important;
+    height:12px !important;
+    position:absolute;
+    border-radius: 50%;
+    border:2px solid #fff;
+    left:-6px;
+    top:-6px;
+    background-color:#000;
+}
+
+div.cbppInteractiveChart div.aWrap div.hide {
+    visibility:hidden;
+}
+
+div.cbppInteractiveChart div.aWrap div.annotation {
+    background-color:#fff;
+    white-space: nowrap;
+    z-index:100;
+}
+
+div.cbppInteractiveChart div.aWrap div.annotation.transparent {
+    background:none;
+}
+
+div.cbppInteractiveChart div.zeroLine {
+    position:absolute;
+    height:2px;
+    background-color:#666;
+}
+
+div.cbppInteractiveChart div.legend {
+    position:absolute;
+    background-color:#fff;
+    padding:5px;
+}
+
+div.cbppInteractiveChart div.legend ul {
+    list-style-type: none;
+    margin-left:0px;
+    padding-left:0px;
+    margin-top:0px;
+    margin-bottom:0px;
+}
+
+div.cbppInteractiveChart div.legend ul li {
+    margin-left:0px;
+    padding-left:0px;
+}
+
+div.cbppInteractiveChart div.legend ul li div.legendLine {
+    height:3px;
+    width:50px;
+    position:relative;
+    top:-0.3em;
+    display:inline-block;
+}
+
+div.cbppInteractiveChart div.legend ul li div.legendBox {
+    height:20px;
+    width:20px;
+    position:relative;
+    top:0em;
+    display:inline-block;
+}
+
+div.cbppInteractiveChart div.legend ul li div.legendLabel {
+    position:relative;
+    display:inline-block;
+    padding-left:5px;
+}
+
+@media (max-width:600px) {
+    div.cbppInteractiveChart  {
+        font-size:14pt;
+    }
+}
