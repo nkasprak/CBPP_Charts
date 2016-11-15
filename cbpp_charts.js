@@ -18,7 +18,20 @@ by Nick Kasprak*/
         CBPP.Charts.urlBase = CBPP.urlBase + "CBPP_Charts/v" + CBPP.Charts.version + "/";
         var thisChartLoaded = false;
         var urlBase = CBPP.Charts.urlBase;
-        var flotLoaded = false, cssLoaded = false;
+        var flotLoaded = false, cssLoaded = false, excanvasloaded;
+        function isCanvasSupported(){
+            var elem = document.createElement('canvas');
+            return !!(elem.getContext && elem.getContext('2d'));
+        }
+        if (!isCanvasSupported()) {
+            excanvasloaded = false;
+            $.getScript(urlBase + "/flot/excanvas.min.js", function() {
+                excanvasloaded = true;
+                ready();
+            });
+        } else {
+            excanvasloaded = true;
+        }
         $.getScript(urlBase + "flot/jquery.flot.min.js", function() {
             flotLoaded = true;
             if (typeof(options)==="undefined") {
@@ -26,6 +39,7 @@ by Nick Kasprak*/
                     extraFlotPlugins: []
                 };
             }
+            
             var pluginsRequested = 0,
                 pluginCallback = function() {
                 pluginsRequested--;
@@ -61,7 +75,7 @@ by Nick Kasprak*/
         
         document.getElementsByTagName('head')[0].appendChild(l);
         function ready() {
-            if (flotLoaded && cssLoaded && !thisChartLoaded) {
+            if (flotLoaded && cssLoaded && excanvasloaded && !thisChartLoaded) {
                 CBPP.Charts.ready = true;
                 callback();
                 //CBPP.Chart.loaded = true;
@@ -504,15 +518,21 @@ by Nick Kasprak*/
             }
             function addLabels() {
                 if (typeof(globalOptions.bars) !== "undefined") {
+                    if (typeof(globalOptions.bars.barWidth)==="undefined") {
+                        globalOptions.bars.barWidth = 1;
+                    }
                     if (typeof(globalOptions.bars.labels) !== "undefined") {
                         if (globalOptions.bars.labels.show === true) {
-                            var data = c.plot.getData()[0].data, o, label, wrapper;
-                            for (var i = 0, ii = data.length; i<ii; i++) {
-                                o = c.plot.pointOffset({x:data[i][0] + globalOptions.bars.barWidth/2, y:data[i][1]});
-                                wrapper = $("<div class='labelWrapper' style='left:" + o.left + "px;top:" + o.top + "px'></div>");
-                                label = $("<div class='label'>" + globalOptions.bars.labels.formatter(data[i]) + "</div>");
-                                wrapper.append(label);
-                                c.placeholder.append(wrapper);
+                            var _data = c.plot.getData(), o, label, wrapper, data;
+                            for (var j = 0, jj = _data.length; j<jj; j++) {
+                                data = _data[j].data;
+                                for (var i = 0, ii = data.length; i<ii; i++) {
+                                    o = c.plot.pointOffset({x:data[i][0] + globalOptions.bars.barWidth/2, y:data[i][1]});
+                                    wrapper = $("<div class='labelWrapper' style='left:" + o.left + "px;top:" + o.top + "px'></div>");
+                                    label = $("<div class='label'>" + globalOptions.bars.labels.formatter(data[i],j) + "</div>");
+                                    wrapper.append(label);
+                                    c.placeholder.append(wrapper);
+                                }
                             } 
                         }
                     }
@@ -546,8 +566,11 @@ by Nick Kasprak*/
                 var yaxis = c.plot.getYAxes()[0],
                     chartYMin = yaxis.min,
                     chartYMax = yaxis.max;
+                if (typeof(options.cbpp_hideBottomLine)==="undefined") {
+                    options.cbpp_hideBottomLine = false;
+                }
                 if (chartYMin <= 0 && chartYMax > 0) {add0Axis(0);}
-                if (chartYMin !== 0) {
+                if (chartYMin !== 0 && !options.cbpp_hideBottomLine) {
                     add0Axis(chartYMin);
                 }
             };
@@ -765,7 +788,10 @@ by Nick Kasprak*/
         this.setData = function(newData) {
             var d = [];
             $.extend(true, d, newData);
-            data = d;
+            var reshuffled = organizeWrapper(d, dataOptions, globalOptions);
+            data = reshuffled.data;
+            dataOptions = reshuffled.dataOptions;
+            globalOptions = reshuffled.globalOptions;
         };
         this.setAnnotations = function(newAnnotations) {
             annotations = newAnnotations; 
