@@ -14,14 +14,35 @@ by Nick Kasprak*/
     CBPP.Charts.ready = false;
     
     /*load dependencies*/
-    CBPP.Charts.load = function(callback) {
+    CBPP.Charts.load = function(callback, options) {
         CBPP.Charts.urlBase = CBPP.urlBase + "CBPP_Charts/v" + CBPP.Charts.version + "/";
         var thisChartLoaded = false;
         var urlBase = CBPP.Charts.urlBase;
         var flotLoaded = false, cssLoaded = false;
         $.getScript(urlBase + "flot/jquery.flot.min.js", function() {
             flotLoaded = true;
-            ready();
+            if (typeof(options)==="undefined") {
+                options = {
+                    extraFlotPlugins: []
+                };
+            }
+            var pluginsRequested = 0,
+                pluginCallback = function() {
+                pluginsRequested--;
+                tryReady();
+            };
+            if (options.extraFlotPlugins.length > 0) {
+                for (var i = 0, ii = options.extraFlotPlugins.length; i<ii; i++) {
+                    pluginsRequested++;
+                    $.getScript(urlBase + "flot/jquery.flot." + options.extraFlotPlugins[i] + ".js", pluginCallback);
+                }
+            }
+            function tryReady() {
+                if (pluginsRequested === 0) {
+                    ready();
+                }
+            }
+            tryReady();
         });
         var l = document.createElement("link");
         l.type="text/css";
@@ -145,6 +166,7 @@ by Nick Kasprak*/
     
     /*chart constructor*/
     CBPP.Charts.Chart = function(div_selector, data, dataOptions, globalOptions, uAnnotations) {
+        
         
         if (CBPP.Charts.ready === false) {
             console.error("CBPP_Chart not ready yet");
@@ -380,7 +402,8 @@ by Nick Kasprak*/
             }, FRAME_DURATION);
             return a;
         }
-
+        
+        var options;
         function makeChart() {
             function addAnnotations() {
                 var offset, /*point offset*/ 
@@ -472,9 +495,10 @@ by Nick Kasprak*/
                     zeroLine = $("<div class='zeroLine'></div>"),
                     offset = c.plot.getPlotOffset(),
                     width = c.plot.p2c({x:right,y:y}).left - origin.left;
+                    
+                zeroLine.css("cssText","width:"+Math.round(width + 2) + "px !important");
                 zeroLine.css("top", Math.round(origin.top + offset.top - 1) + "px");
                 zeroLine.css("left", Math.round(origin.left + offset.left - 1) + "px");
-                zeroLine.css("width",Math.round(width + 2) + "px");
                 c.placeholder.append(zeroLine);
         
             }
@@ -694,7 +718,7 @@ by Nick Kasprak*/
                     }
                 });
             }
-            var options = {
+            options = {
                 grid: {
                     borderWidth:0,
                     hoverable:true,
@@ -721,7 +745,6 @@ by Nick Kasprak*/
                 options.xaxis.tickSize = globalOptions.cbpp_xaxis_majorTicks;
             }
             $.extend(true, options, globalOptions);
-            
             
         }
         makeChart();

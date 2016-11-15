@@ -1,5 +1,6 @@
 div.cbppInteractiveChart {
     font-size:16pt;
+    font-family:"proxima-nova-condensed", sans-serif
 }
 
 div.cbppInteractiveChart  .tooltip .anchor {
