@@ -482,8 +482,11 @@ by Nick Kasprak*/
                 }
             }
             function addLegend() {
-                var data = c.plot.getData(),
-                    legend = $("<div class='legend'></div>"),
+                var data = c.plot.getData();
+                if (typeof(c.legend)!=="undefined") {
+                    c.legend.remove();
+                }
+                var legend = c.legend = $("<div class='cbppChartLegend'></div>"),
                     ul = $("<ul>"),
                     li,
                     itemClass = "legendLine";
@@ -497,9 +500,14 @@ by Nick Kasprak*/
                     ul.append(li);
                 }
                 legend.append(ul);
-                legend.css("top",globalOptions.cbpp_legend.top + "%");
-                legend.css("left", globalOptions.cbpp_legend.left + "%");
-                c.placeholder.append(legend);
+                if (typeof(globalOptions.cbpp_legend.outsideLocation)!=="undefined") {
+                    legend.css("position","relative");
+                    $(globalOptions.cbpp_legend.outsideLocation).append(legend);
+                } else {
+                    legend.css("top",globalOptions.cbpp_legend.top + "%");
+                    legend.css("left", globalOptions.cbpp_legend.left + "%");
+                    c.placeholder.append(legend);
+                }
             }
             function add0Axis(y) {
                 var xaxis = c.plot.getXAxes()[0],
@@ -585,6 +593,10 @@ by Nick Kasprak*/
                         pos_y = item.datapoint[1],
                         x = pos_x,
                         y = pos_y;
+                    var tooltipText = options.cbpp_tooltipMaker(x, y, item.series);
+                    if (tooltipText === null) {
+                        return;
+                    }
                     if (typeof(item.series.bars) !== "undefined") {
                         if (item.series.bars.show) {
                             pos_x = pos.x;
@@ -607,7 +619,8 @@ by Nick Kasprak*/
                         classString += "north";
                         offsetDirection.v = 1;
                     }
-                    var tooltip = $("<div class='tooltip " + classString + "'><div class='anchor'>" + options.cbpp_tooltipMaker(x, y, item.series) + "</div></div>");
+                    var tooltip = $("<div class='tooltip " + classString + "'><div class='anchor'>" + tooltipText + "</div></div>");
+
                     tooltip.css("left", (offset.left + offsetDirection.h*10) + "px");
                     tooltip.css("top", (offset.top + offsetDirection.v*10) + "px");
                     c.placeholder.append(tooltip);
@@ -827,7 +840,8 @@ by Nick Kasprak*/
             return c.plot;
         };
         this.animateTo = function(duration, data, dataOptions, globalOptions) {
-            animateTo(duration, data, dataOptions, globalOptions);
+            var a = animateTo(duration, data, dataOptions, globalOptions);
+            return a;
         };
     };
     /*end chart constructor*/

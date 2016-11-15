@@ -84,13 +84,13 @@ div.cbppInteractiveChart div.zeroLine {
     background-color:#666;
 }
 
-div.cbppInteractiveChart div.legend {
+div.cbppChartLegend {
     position:absolute;
     background-color:#fff;
     padding:5px;
 }
 
-div.cbppInteractiveChart div.legend ul {
+div.cbppChartLegend ul {
     list-style-type: none;
     margin-left:0px;
     padding-left:0px;
@@ -98,12 +98,12 @@ div.cbppInteractiveChart div.legend ul {
     margin-bottom:0px;
 }
 
-div.cbppInteractiveChart div.legend ul li {
+div.cbppChartLegend ul li {
     margin-left:0px;
     padding-left:0px;
 }
 
-div.cbppInteractiveChart div.legend ul li div.legendLine {
+div.cbppChartLegend ul li div.legendLine {
     height:3px;
     width:50px;
     position:relative;
@@ -111,7 +111,7 @@ div.cbppInteractiveChart div.legend ul li div.legendLine {
     display:inline-block;
 }
 
-div.cbppInteractiveChart div.legend ul li div.legendBox {
+div.cbppChartLegend ul li div.legendBox {
     height:20px;
     width:20px;
     position:relative;
@@ -119,7 +119,7 @@ div.cbppInteractiveChart div.legend ul li div.legendBox {
     display:inline-block;
 }
 
-div.cbppInteractiveChart div.legend ul li div.legendLabel {
+div.cbppChartLegend ul li div.legendLabel {
     position:relative;
     display:inline-block;
     padding-left:5px;
